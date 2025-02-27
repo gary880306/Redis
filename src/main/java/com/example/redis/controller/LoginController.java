@@ -7,6 +7,9 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.concurrent.TimeUnit;
 
+import static com.example.redis.utils.RedisConstants.LOGIN_CODE_KEY;
+import static com.example.redis.utils.RedisConstants.LOGIN_CODE_TTL;
+
 @Slf4j
 @CrossOrigin(origins = "*") // 允許跨域請求
 @RestController
@@ -26,8 +29,8 @@ public class LoginController {
         // 1. 生成驗證碼
         String code = String.valueOf((int)((Math.random() * 9 + 1) * 100000));
         
-        // 2. 保存驗證碼到Redis，設置過期時間為5分鐘
-        redisTemplate.opsForValue().set("phone:" + phone, code, 5, TimeUnit.MINUTES);
+        // 2. 保存驗證碼到Redis，設置過期時間為5分鐘 (前綴login:code)
+        redisTemplate.opsForValue().set(LOGIN_CODE_KEY + phone, code, LOGIN_CODE_TTL, TimeUnit.MINUTES);
         
         // 3. 發送驗證碼（實際項目中對接短信服務）
         smsService.sendSms(phone, code);
@@ -37,8 +40,8 @@ public class LoginController {
     
     @PostMapping("/login")
     public String login(@RequestParam("phone") String phone, @RequestParam("code") String code) {
-        // 1. 從Redis獲取驗證碼
-        String cacheCode = (String) redisTemplate.opsForValue().get("login:code:" + phone);
+        // 1. 從Redis獲取驗證碼並校驗
+        String cacheCode = (String) redisTemplate.opsForValue().get(LOGIN_CODE_KEY + phone);
         
         if (cacheCode == null) {
             return "驗證碼已過期";
@@ -47,7 +50,9 @@ public class LoginController {
         if (!cacheCode.equals(code)) {
             return "驗證碼錯誤";
         }
-        
+        // 2. 根據手機號查詢用戶
+
+
         // 2. 生成登錄令牌
         String token = java.util.UUID.randomUUID().toString();
         
