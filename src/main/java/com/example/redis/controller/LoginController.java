@@ -1,6 +1,9 @@
 package com.example.redis.controller;
 
+import com.example.redis.entity.User;
 import com.example.redis.service.SmsService;
+import com.example.redis.service.UserService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.bind.annotation.*;
 import lombok.extern.slf4j.Slf4j;
@@ -18,10 +21,13 @@ public class LoginController {
     
     private final RedisTemplate<String, Object> redisTemplate;
     private final SmsService smsService;
-    
-    public LoginController(RedisTemplate<String, Object> redisTemplate, SmsService smsService) {
+    private final UserService userService;
+
+
+    public LoginController(RedisTemplate<String, Object> redisTemplate, SmsService smsService, UserService userService) {
         this.redisTemplate = redisTemplate;
         this.smsService = smsService;
+        this.userService = userService;
     }
 
     @PostMapping("/code")
@@ -50,7 +56,8 @@ public class LoginController {
         if (!cacheCode.equals(code)) {
             return "驗證碼錯誤";
         }
-        // 2. 根據手機號查詢用戶
+        // 2. 根據手機號查詢用戶 query by MyBatis-Plus with phone
+        User user = userService.lambdaQuery().eq(User::getPhone, phone).one();
 
 
         // 2. 生成登錄令牌
