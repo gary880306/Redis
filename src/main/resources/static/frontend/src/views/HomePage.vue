@@ -1,38 +1,42 @@
 <template>
   <div class="home-container">
-    <h2>歡迎來到首頁</h2>
-    <p>你已成功登錄！</p>
-    <button @click="logout">登出</button>
+    <h2>首頁</h2>
+    <button @click="testApi">Test</button>
+    <p v-if="message">{{ message }}</p>
   </div>
 </template>
 
 <script>
-import { useRouter } from "vue-router";
-
+import { ref } from "vue";
+import api from "@/api/axios"; // 確保 axios.js 有攔截 Authorization
 export default {
   setup() {
-    const router = useRouter();
+    const message = ref("");
 
-    const logout = () => {
-      localStorage.removeItem("token");
-      router.push("/");
+    const testApi = async () => {
+      try {
+        const res = await api.get("/user/test");
+        console.log("API 回應:", res.data);
+        message.value = res.data;
+      } catch (error) {
+        console.error("API 錯誤:", error);
+        message.value = error.response?.data || "請求失敗";
+      }
     };
 
-    return { logout };
+    return { message, testApi };
   },
 };
 </script>
 
 <style scoped>
 .home-container {
-  max-width: 400px;
-  margin: 50px auto;
   text-align: center;
+  margin-top: 50px;
 }
 button {
   padding: 10px;
-  margin: 10px 0;
-  width: 100%;
+  margin-top: 20px;
   cursor: pointer;
 }
 </style>

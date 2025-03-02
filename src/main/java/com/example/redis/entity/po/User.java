@@ -1,4 +1,4 @@
-package com.example.redis.entity;
+package com.example.redis.entity.po;
 
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
