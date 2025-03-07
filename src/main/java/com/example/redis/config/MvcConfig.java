@@ -1,6 +1,7 @@
 package com.example.redis.config;
 
 import com.example.redis.interceptor.LoginInterceptor;
+import com.example.redis.interceptor.RefreshTokenInterceptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -15,11 +16,18 @@ public class MvcConfig implements WebMvcConfigurer {
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-       registry.addInterceptor(new LoginInterceptor(stringRedisTemplate))
-               .excludePathPatterns(
-                       "/user/login",
-                       "/user/code"
-                       // 之後可以擴展
-               );
+        registry.addInterceptor(new LoginInterceptor())
+                .excludePathPatterns(
+                        "/user/login",
+                        "/user/code",
+                        "/user/test"
+                        // 之後可以擴展
+                ).order(0);
+        registry.addInterceptor(new RefreshTokenInterceptor(stringRedisTemplate)).addPathPatterns("/**").
+                excludePathPatterns(
+                        "/user/login",
+                        "/user/code"
+                        // 之後可以擴展
+                ).order(1);
     }
 }
