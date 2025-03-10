@@ -17,6 +17,9 @@ CREATE TABLE shop (
                       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '創建時間'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='商店資訊表';
 
+-- add imageUrl
+ALTER TABLE shop ADD COLUMN image_url VARCHAR(255) NOT NULL COMMENT '商店圖片URL';
+
 -- fakeData
 INSERT INTO shop (name, owner, phone, address, created_at)
 VALUES ('星空咖啡館', '張三', '0912-345-678', '台北市信義區松高路123號', NOW());

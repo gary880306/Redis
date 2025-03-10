@@ -16,5 +16,6 @@ public class Shop implements Serializable {
     private String owner;        // 商店擁有者
     private String phone;        // 聯絡電話
     private String address;      // 商店地址
+    private String imageUrl;      // 圖片URL
     private Timestamp createdAt; // 創建時間
 }

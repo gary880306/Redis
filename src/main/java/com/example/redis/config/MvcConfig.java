@@ -22,12 +22,12 @@ public class MvcConfig implements WebMvcConfigurer {
                         "/user/code",
                         "/user/test"
                         // 之後可以擴展
-                ).order(0);
+                ).order(1);
         registry.addInterceptor(new RefreshTokenInterceptor(stringRedisTemplate)).addPathPatterns("/**").
                 excludePathPatterns(
                         "/user/login",
                         "/user/code"
                         // 之後可以擴展
-                ).order(1);
+                ).order(0);
     }
 }

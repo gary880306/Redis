@@ -7,7 +7,6 @@ import com.example.redis.service.SmsService;
 import com.example.redis.service.UserService;
 import com.example.redis.utils.RedisConstants;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -29,13 +28,11 @@ public class LoginController {
     @Autowired
     private StringRedisTemplate stringRedisTemplate;
 
-    private final RedisTemplate<String, Object> redisTemplate;
     private final SmsService smsService;
     private final UserService userService;
 
 
-    public LoginController(RedisTemplate<String, Object> redisTemplate, SmsService smsService, UserService userService) {
-        this.redisTemplate = redisTemplate;
+    public LoginController(SmsService smsService, UserService userService) {
         this.smsService = smsService;
         this.userService = userService;
     }
