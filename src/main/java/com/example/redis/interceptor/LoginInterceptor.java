@@ -9,6 +9,7 @@ public class LoginInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+        // 從 ThreadLocal 中獲取用戶，如果為 null 則表示未登入
         if (UserHolder.getUser() == null) {
             response.setStatus(401);
             return false;

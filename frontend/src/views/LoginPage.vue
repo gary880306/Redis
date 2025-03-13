@@ -15,10 +15,18 @@
 
 <script>
 import { useLogin } from "@/api/login";
+import { onUnmounted } from "vue";
 
 export default {
   setup() {
-    return useLogin();
+    const { phone, code, message, isSending, countdown, sendCode, login, cleanup } = useLogin();
+
+    // 在組件卸載時清理資源
+    onUnmounted(() => {
+      cleanup();
+    });
+
+    return { phone, code, message, isSending, countdown, sendCode, login };
   },
 };
 </script>

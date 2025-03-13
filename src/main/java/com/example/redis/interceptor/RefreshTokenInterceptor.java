@@ -28,21 +28,19 @@ public class RefreshTokenInterceptor implements HandlerInterceptor {
 
         // 2. 檢查 token 是否有效
         if (StrUtil.isBlank(token) || !token.startsWith("Bearer ")) {
-            response.setStatus(401);
-            return false;
+            return true;
         }
 
         // 去掉 "Bearer "，只保留 token 值
         token = token.substring(7);
 
-        // 3. 構造 Redis 存儲的 Key
+        // 3. Token Key
         String key = RedisConstants.LOGIN_TOKEN_KEY + token;
 
         // 4. 查詢 Redis，檢查 Token 是否存在
         Map<Object, Object> userMap = stringRedisTemplate.opsForHash().entries(key);
         if (userMap.isEmpty()) {
-            response.setStatus(401);
-            return false;
+            return true;
         }
 
         // 5. 解析用戶資訊
@@ -59,7 +57,7 @@ public class RefreshTokenInterceptor implements HandlerInterceptor {
 
     @Override
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
-        HandlerInterceptor.super.afterCompletion(request, response, handler, ex);
+        UserHolder.clear();
     }
 
 }

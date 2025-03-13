@@ -17,11 +17,13 @@ public class CorsConfig {
 
         config.setAllowCredentials(true); // 允許帶上 Cookie、Authorization
 
-        // 請求 URL
-        config.setAllowedOrigins(Arrays.asList("http://localhost:8081"));
+        config.setAllowedOrigins(Arrays.asList(
+                "http://localhost:8080",
+                "http://localhost:8081"
+        ));
 
         config.setAllowedHeaders(Arrays.asList("*")); // 允許所有 Header
-        config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE"));
+        config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
 
         // 確保前端可以讀取 `Authorization` Header
         config.setExposedHeaders(Arrays.asList("Authorization"));

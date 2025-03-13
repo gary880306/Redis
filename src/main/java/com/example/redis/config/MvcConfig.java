@@ -16,18 +16,17 @@ public class MvcConfig implements WebMvcConfigurer {
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
+
+        registry.addInterceptor(new RefreshTokenInterceptor(stringRedisTemplate))
+                .addPathPatterns("/**")
+                .order(0);
+
         registry.addInterceptor(new LoginInterceptor())
                 .excludePathPatterns(
                         "/user/login",
                         "/user/code",
                         "/user/test"
-                        // 之後可以擴展
+                        // 之後可以擴展不需要登入的路徑
                 ).order(1);
-        registry.addInterceptor(new RefreshTokenInterceptor(stringRedisTemplate)).addPathPatterns("/**").
-                excludePathPatterns(
-                        "/user/login",
-                        "/user/code"
-                        // 之後可以擴展
-                ).order(0);
     }
 }
