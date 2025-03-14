@@ -37,9 +37,8 @@ public class ShopController {
 
     // 更新商店
     @PutMapping("/update")
-    public Result<String> updateShop(@RequestBody Shop shop) {
-        boolean updated = shopService.updateById(shop);
-        return updated ? Result.success("商店更新成功") : Result.error("商店更新失敗");
+    public Result<Shop> updateShop(@RequestBody Shop shop) {
+        return shopService.update(shop);
     }
 
     // 刪除商店
