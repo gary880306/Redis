@@ -16,6 +16,7 @@ import java.util.concurrent.TimeUnit;
 
 import static com.example.redis.utils.RedisConstants.CATCH_SHOP_ID;
 import static com.example.redis.utils.RedisConstants.CATCH_SHOP_TTL;
+import static com.example.redis.utils.RedisConstants.CATCH_SHOP_NULL_TTL;
 
 @Service
 public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements ShopService {
@@ -36,12 +37,20 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements Sh
             return Result.success(shop);
         }
 
+        // 解決緩存穿透
+        if (shopJson != null) {
+            // 代表是空字符串
+            return Result.error("商店不存在");
+        }
+
         // 4. 不存在，查詢資料庫
         Shop shop = getById(id);
 
         // 5. 判斷是否存在資料庫
         // 6. 不存在資料庫，直接返回
         if (shop == null) {
+            // 將空值寫入 redis，設定時效2分鐘
+            stringRedisTemplate.opsForValue().set(shopKey, "", CATCH_SHOP_NULL_TTL, TimeUnit.MINUTES);
             return Result.error("商店不存在");
         }
         // 7. 存在資料庫，寫入 redis，設定時效30分鐘
