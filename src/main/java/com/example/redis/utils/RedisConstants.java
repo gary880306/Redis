@@ -9,4 +9,5 @@ public class RedisConstants {
     public static final String CATCH_SHOP_ID = "catch:shop:";
     public static final Long CATCH_SHOP_NULL_TTL = 2L;
     public static final Long CATCH_SHOP_TTL = 30L;
+    public static final String LOCK_SHOP_ID = "lock:shop:";
 }
