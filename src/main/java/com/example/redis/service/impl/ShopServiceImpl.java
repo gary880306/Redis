@@ -2,23 +2,28 @@ package com.example.redis.service.impl;
 
 import cn.hutool.core.util.BooleanUtil;
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.redis.common.Result;
 import com.example.redis.entity.po.Shop;
 import com.example.redis.mapper.ShopMapper;
 import com.example.redis.service.ShopService;
+import com.example.redis.utils.RedisData;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import static com.example.redis.utils.RedisConstants.CATCH_SHOP_ID;
 import static com.example.redis.utils.RedisConstants.CATCH_SHOP_TTL;
 import static com.example.redis.utils.RedisConstants.CATCH_SHOP_NULL_TTL;
-import static com.example.redis.utils.RedisConstants.LOCK_SHOP_ID;
+import static com.example.redis.utils.RedisConstants.LOCK_SHOP_KEY;
 
 @Service
 public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements ShopService {
@@ -26,13 +31,18 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements Sh
     @Autowired
     private StringRedisTemplate stringRedisTemplate;
 
+    private static final ExecutorService CACHE_REBUILD_EXECUTOR = Executors.newFixedThreadPool(10); // 建立一個大小為 10 的線程池
+
     @Override
     public Result<Shop> queryById(Long id) {
         // 緩存穿透
         // Shop shop = queryWithPassThrough(id);
 
         // 互斥鎖解決緩存擊穿
-        Shop shop = queryWithMutex(id);
+//        Shop shop = queryWithMutex(id);
+
+        // 邏輯過期解決緩存擊穿
+        Shop shop = queryWithLogicalExpire(id);
 
         if (shop == null) {
             return Result.error("商店不存在");
@@ -95,7 +105,7 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements Sh
 
         // 4. 實現緩存重建
         Shop shop = null;
-        String lockKey = LOCK_SHOP_ID + id;
+        String lockKey = LOCK_SHOP_KEY + id;
         boolean isLock = false;
 
         try {
@@ -143,6 +153,61 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements Sh
         return shop;
     }
 
+    // 緩存擊穿(利用邏輯過期)
+    public Shop queryWithLogicalExpire(Long id) {
+        String shopKey = CATCH_SHOP_ID + id;
+        // 1. 從 redis 查詢商店緩存
+        String shopJson = stringRedisTemplate.opsForValue().get(shopKey);
+
+        // 2. 判斷是否存在 redis
+        if (StrUtil.isBlank(shopJson)) {
+            // 3. 未存在，直接返回
+            return null;
+        }
+
+        // 4. 存在，先把 json 反序列化成對象
+        RedisData data = JSONUtil.toBean(shopJson, RedisData.class);
+        Shop shop = JSONUtil.toBean((JSONObject) data.getData(), Shop.class);
+        LocalDateTime expireTime = data.getExpireTime();
+        // 5. 判斷是否過期
+        if (expireTime.isAfter(LocalDateTime.now())) {
+            // 5.1 未過期，直接返回商店資訊
+            return shop;
+        }
+        // 5.2 已過期，緩存重建
+        String lockKey = LOCK_SHOP_KEY + id;
+        // 6. 緩存重建
+        // 6.1 獲取互斥鎖
+        boolean isLock = getLock(lockKey);
+        // 6.2 判斷獲取是否成功
+        if (isLock) {
+            // 6.3 再次檢查是否已被其他線程更新
+            shopJson = stringRedisTemplate.opsForValue().get(shopKey);
+            if (StrUtil.isNotBlank(shopJson)) {
+                RedisData latestData = JSONUtil.toBean(shopJson, RedisData.class);
+                // 檢查是否已被更新且未過期
+                if (latestData.getExpireTime().isAfter(LocalDateTime.now())) {
+                    // 已被更新，直接返回
+                    return JSONUtil.toBean((JSONObject) latestData.getData(), Shop.class);
+                }
+            }
+            // 6.4 成功，開啟獨立線程處理緩存重建
+            CACHE_REBUILD_EXECUTOR.submit(() -> {
+                try {
+                    this.saveShopToRedis(id, 20L);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                } finally {
+                    // 釋放鎖
+                    unLock(lockKey);
+                }
+            });
+        }
+
+        // 6.5 返回過期的商店資訊
+        return shop;
+    }
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Result<Shop> update(Shop shop) {
@@ -166,5 +231,22 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements Sh
     // 釋放鎖
     private void unLock(String key) {
         stringRedisTemplate.delete(key);
+    }
+
+    // 緩存預熱
+    public void saveShopToRedis(Long id, Long expireTime) throws InterruptedException {
+        // 1. 查詢商店資訊
+        Shop shop = getById(id);
+
+        // 模擬重建緩存的延遲
+        Thread.sleep(200L);
+
+        // 2. 封裝 RedisData
+        RedisData data = new RedisData();
+        data.setData(shop);
+        data.setExpireTime(LocalDateTime.now().plusSeconds(expireTime));
+
+        // 3. 存入 Redis
+        stringRedisTemplate.opsForValue().set(CATCH_SHOP_ID + id, JSONUtil.toJsonStr(data));
     }
 }
