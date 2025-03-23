@@ -15,8 +15,8 @@ public class Voucher implements Serializable {
     /**
      * 優惠券ID (主鍵)
      */
-    @TableId(value = "voucher_id", type = IdType.AUTO)
-    private Long voucherId;
+    @TableId(value = "id", type = IdType.AUTO)
+    private Long id;
 
     /**
      * 商店ID
