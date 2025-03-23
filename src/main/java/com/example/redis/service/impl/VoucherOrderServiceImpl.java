@@ -46,7 +46,11 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
         }
 
         // 4. 扣減庫存
-        seckillVoucherService.update().setSql("stock = stock - 1").eq("voucher_id", voucherId).update();
+        boolean success = seckillVoucherService.update().setSql("stock = stock - 1").eq("voucher_id", voucherId).gt("stock", 0).update();
+
+        if (!success) {
+            return Result.error("庫存不足!");
+        }
 
         // 5. 創建訂單
         long orderId = redisIdWorker.nextId("order");
