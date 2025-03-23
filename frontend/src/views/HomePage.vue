@@ -298,6 +298,51 @@
             </el-descriptions-item>
           </el-descriptions>
         </div>
+
+        <!-- 優惠券區域 -->
+        <div class="shop-vouchers">
+          <h3 class="voucher-title">優惠券</h3>
+          <div v-if="vouchersLoading" class="vouchers-loading">
+            <el-skeleton :rows="3" animated />
+          </div>
+          <div v-else-if="vouchers.length > 0" class="voucher-list">
+            <div class="voucher-item" v-for="voucher in vouchers" :key="voucher.voucherId">
+              <div class="voucher-left" :class="{ 'seckill': voucher.type === 1 }">
+                <div class="voucher-value">
+                  <span class="symbol">¥</span>
+                  <span class="amount">{{ (voucher.actualValue / 100).toFixed(0) }}</span>
+                </div>
+                <div class="voucher-condition" v-if="voucher.payValue > 0">
+                  滿{{ (voucher.payValue / 100).toFixed(0) }}元可用
+                </div>
+                <div class="voucher-condition" v-else>
+                  無門檻使用
+                </div>
+              </div>
+              <div class="voucher-right">
+                <div class="voucher-info">
+                  <div class="voucher-name">{{ voucher.title }}</div>
+                  <div class="voucher-desc">{{ voucher.subTitle || '暫無描述' }}</div>
+                  <div class="voucher-time" v-if="voucher.beginTime && voucher.endTime">
+                    {{ formatTime(voucher.beginTime) }} - {{ formatTime(voucher.endTime) }}
+                  </div>
+                </div>
+                <div class="voucher-action">
+                  <el-button v-if="voucher.type === 1" type="danger" size="small" :disabled="voucher.status !== 1" @click="handleSeckill(voucher.voucherId)">
+                    {{ voucher.status === 1 ? '搶購' : (voucher.status === 2 ? '已下架' : '已過期') }}
+                  </el-button>
+                  <el-button v-else type="primary" size="small" @click="handleClaim(voucher.voucherId)">
+                    領取
+                  </el-button>
+                </div>
+              </div>
+              <div class="voucher-type" v-if="voucher.type === 1">秒殺券</div>
+            </div>
+          </div>
+          <div v-else class="no-vouchers">
+            <el-empty description="暫無優惠券" />
+          </div>
+        </div>
       </div>
       <template #footer>
         <div class="dialog-footer">
@@ -420,6 +465,8 @@ export default {
     const shops = ref([]);
     const showModal = ref(false);
     const selectedShop = ref({});
+    const vouchers = ref([]);
+    const vouchersLoading = ref(false);
 
     // 輪播圖數據
     const heroSlides = ref([
@@ -515,9 +562,51 @@ export default {
         const res = await api.get(`/shop/${shopId}`);
         selectedShop.value = res.data.data;
         showModal.value = true;
+
+        // 顯示商店詳情後立即獲取該商店的優惠券
+        fetchShopVouchers(shopId);
       } catch (error) {
         ElMessage.error("獲取商店詳情失敗");
       }
+    };
+
+    // 獲取商店優惠券
+    const fetchShopVouchers = async (shopId) => {
+      vouchersLoading.value = true;
+      try {
+        const res = await api.get(`/voucher/list/${shopId}`);
+        if (res.data && res.data.code === 200) {
+          vouchers.value = res.data.data || [];
+        } else {
+          vouchers.value = [];
+          console.error("獲取優惠券失敗:", res.data?.message || "未知錯誤");
+        }
+      } catch (error) {
+        console.error("獲取優惠券API錯誤:", error);
+        vouchers.value = [];
+        ElMessage.error("獲取優惠券失敗");
+      } finally {
+        vouchersLoading.value = false;
+      }
+    };
+
+    // 格式化時間
+    const formatTime = (timeString) => {
+      if (!timeString) return '';
+      const date = new Date(timeString);
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    };
+
+    // 秒殺券搶購邏輯
+    const handleSeckill = (voucherId) => {
+      ElMessage.info(`開始搶購 ID 為 ${voucherId} 的秒殺券 (此功能尚在開發中)`);
+      // TODO: 實現秒殺邏輯
+    };
+
+    // 普通券領取邏輯
+    const handleClaim = (voucherId) => {
+      ElMessage.info(`領取 ID 為 ${voucherId} 的優惠券 (此功能尚在開發中)`);
+      // TODO: 實現領券邏輯
     };
 
     const openModal = (shopId) => {
@@ -527,6 +616,7 @@ export default {
     const closeModal = () => {
       showModal.value = false;
       selectedShop.value = {};
+      vouchers.value = []; // 清空優惠券數據
     };
 
     const visitShop = () => {
@@ -534,6 +624,7 @@ export default {
     };
 
     const getImageUrl = (imagePath) => {
+      if (!imagePath) return '';
       if (imagePath.startsWith('http')) {
         return imagePath;
       }
@@ -554,6 +645,8 @@ export default {
       shops,
       showModal,
       selectedShop,
+      vouchers,
+      vouchersLoading,
       heroSlides,
       quickFeatures,
       categories,
@@ -563,7 +656,10 @@ export default {
       closeModal,
       visitShop,
       getImageUrl,
-      truncateText
+      truncateText,
+      formatTime,
+      handleSeckill,
+      handleClaim
     };
   },
 };
@@ -1191,6 +1287,151 @@ ul {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+/* 優惠券區域樣式 */
+.shop-vouchers {
+  margin-top: 24px;
+}
+
+.voucher-title {
+  font-size: 18px;
+  margin-bottom: 16px;
+  color: #252b3a;
+  position: relative;
+  padding-left: 12px;
+}
+
+.voucher-title:before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 4px;
+  bottom: 4px;
+  width: 4px;
+  background-color: #1890ff;
+  border-radius: 2px;
+}
+
+.vouchers-loading {
+  padding: 16px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+}
+
+.voucher-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.voucher-item {
+  display: flex;
+  height: 100px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+  position: relative;
+  overflow: hidden;
+}
+
+.voucher-left {
+  width: 120px;
+  background-color: #1890ff;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.voucher-left.seckill {
+  background-color: #ff4d4f;
+}
+
+.voucher-left:after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.5) 100%);
+}
+
+.voucher-value {
+  display: flex;
+  align-items: baseline;
+}
+
+.symbol {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.amount {
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.voucher-condition {
+  font-size: 12px;
+  margin-top: 8px;
+  opacity: 0.9;
+}
+
+.voucher-right {
+  flex: 1;
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.voucher-info {
+  flex: 1;
+}
+
+.voucher-name {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #252b3a;
+}
+
+.voucher-desc {
+  font-size: 12px;
+  color: #5a6478;
+  margin-bottom: 8px;
+}
+
+.voucher-time {
+  font-size: 12px;
+  color: #909399;
+}
+
+.voucher-action {
+  margin-left: 16px;
+}
+
+.voucher-type {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: #ff4d4f;
+  color: white;
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.no-vouchers {
+  padding: 24px 0;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  text-align: center;
 }
 
 /* 頁腳 */

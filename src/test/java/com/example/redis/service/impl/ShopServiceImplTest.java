@@ -25,6 +25,6 @@ public class ShopServiceImplTest {
     @Disabled
     void saveShopToRedis() throws InterruptedException {
         Shop shop = shopService.getById(1L);
-        catchClient.setWithLogicalExpire(CATCH_SHOP_KEY + 1L, shop, 10L, TimeUnit.SECONDS);
+        catchClient.setWithLogicalExpire(CATCH_SHOP_KEY + 1L, shop, 1L, TimeUnit.SECONDS);
     }
 }

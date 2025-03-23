@@ -1,5 +1,5 @@
 CREATE TABLE `voucher` (
-                              `voucher_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT COMMENT '優惠券ID',
+                              `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT COMMENT '主鍵',
                               `shop_id` bigint(20) unsigned DEFAULT NULL COMMENT '商店ID',
                               `title` varchar(255) NOT NULL NULL COMMENT '優惠券名稱',
                               `sub_title` varchar(255) DEFAULT NULL COMMENT '名稱',
@@ -10,7 +10,7 @@ CREATE TABLE `voucher` (
                               `status` tinyint(1) unsigned NOT NULL DEFAULT '1' COMMENT '1,上架; 2,下架; 3,過期',
                               `create_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '創建時間',
                               `update_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新時間',
-                              PRIMARY KEY (`voucher_id`)
+                              PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4;
 
 

@@ -16,3 +16,7 @@ INSERT INTO `seckill_voucher`
 (`voucher_id`, `stock`, `begin_time`, `end_time`)
 VALUES
     (1, 50, '2025-03-20 10:00:00', '2025-03-20 22:00:00');
+
+-- 測試超賣 stock 可以存入負數
+ALTER TABLE `seckill_voucher`
+    MODIFY COLUMN `stock` int(8) NOT NULL COMMENT '庫存';
