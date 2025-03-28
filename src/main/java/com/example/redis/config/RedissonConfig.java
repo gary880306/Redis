@@ -17,4 +17,22 @@ public class RedissonConfig {
         // 創建對象
         return Redisson.create(config);
     }
+
+    @Bean
+    public RedissonClient redisson2() {
+        // 配置
+        Config config = new Config();
+        config.useSingleServer().setAddress("redis://127.0.0.1:6380");
+        // 創建對象
+        return Redisson.create(config);
+    }
+
+    @Bean
+    public RedissonClient redisson3() {
+        // 配置
+        Config config = new Config();
+        config.useSingleServer().setAddress("redis://127.0.0.1:6381");
+        // 創建對象
+        return Redisson.create(config);
+    }
 }
