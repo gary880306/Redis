@@ -47,6 +47,11 @@ public class VoucherDto {
     private Integer type;
 
     /**
+     * 狀態
+     */
+    private Integer status;
+
+    /**
      * 庫存
      */
     private Integer stock;

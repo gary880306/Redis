@@ -33,6 +33,6 @@ public class VoucherOrderController {
                     .body(result);
         }
 
-        return ResponseEntity.ok(voucherOrderService.getById(voucherId));
+        return ResponseEntity.ok(result.getData().toString());
     }
 }
