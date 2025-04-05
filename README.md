@@ -18,6 +18,9 @@
 2. **Redis Stream**：作為消息隊列，實現異步處理訂單
 3. **Redisson 分散式鎖**：確保同一用戶不會重複下單
 
+<details>
+<summary>優惠券相關</summary>
+
 ## 優惠券搶購流程
 
 ### 1. 準備階段
@@ -218,3 +221,4 @@
 ## 優惠券搶購流程圖
 ![優惠券搶購流程圖](/seckillWorkflow.png)
 https://www.canva.com/design/DAGjvu7EWos/WGWJld7Njkt6iniUOe3Btg/edit?utm_content=DAGjvu7EWos&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton
+</details>
