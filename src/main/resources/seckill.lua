@@ -9,14 +9,14 @@ local orderId = ARGV[3]
 -- 數據key
 -- 1.庫存key
 local stockKey = 'seckill:stock:' .. voucherId;
--- 2.訂單ley
+-- 2.訂單key
 local orderKey = 'order:stock:' .. voucherId;
 
 -- 業務流程
 -- 1.判斷庫存是否充足 get stockKey
 if (tonumber(redis.call('get', stockKey)) <= 0) then
-    -- 庫存不足，返回 -1
-    return -1;
+    -- 庫存不足，返回 1
+    return 1;
 end
 -- 2.判斷用戶是否下單 SISMEMBER orderKey userId
 if (redis.call('sismember', orderKey, userId) == 1) then
