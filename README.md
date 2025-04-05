@@ -217,3 +217,4 @@
 
 ## 優惠券搶購流程圖
 ![優惠券搶購流程圖](/seckillWorkflow.png)
+https://www.canva.com/design/DAGjvu7EWos/WGWJld7Njkt6iniUOe3Btg/edit?utm_content=DAGjvu7EWos&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton
