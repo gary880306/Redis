@@ -1,12 +1,14 @@
 package com.example.redis.entity.po;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
 import java.io.Serializable;
 import java.sql.Timestamp;
+import java.util.Map;
 
 @Data
 @TableName("blog")
@@ -64,4 +66,16 @@ public class Blog implements Serializable {
      * 更新時間
      */
     private Timestamp updateTime;
+
+    /**
+     * 用戶資訊（非資料庫欄位）
+     */
+    @TableField(exist = false)
+    private Map<String, Object> userInfo;
+
+    /**
+     * 商店資訊（非資料庫欄位）
+     */
+    @TableField(exist = false)
+    private Map<String, Object> shopInfo;
 }

@@ -1,5 +1,6 @@
 package com.example.redis.controller;
 
+import cn.hutool.core.lang.UUID;
 import com.example.redis.common.Result;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -24,12 +25,39 @@ public class UploadController {
             // 獲取原始文件名稱
             String originalFilename = file.getOriginalFilename();
 
-            // 保存文件
-            file.transferTo(new File(IMAGE_UPLOAD_DIR, originalFilename));
+            // 檢查原始檔名並安全地獲取副檔名
+            if (originalFilename == null || originalFilename.isEmpty()) {
+                log.debug("originalFilename: {}, length: {}", originalFilename,
+                        originalFilename != null ? originalFilename.length() : "null");
+                return Result.error("檔案名稱不能為空");
+            }
 
-            log.debug("文件上傳成功, {}", originalFilename);
-            return Result.success(originalFilename);
+            String extension = "";
+            if (originalFilename.contains(".")) {
+                extension = originalFilename.substring(originalFilename.lastIndexOf("."));
+            }
+
+            // 生成唯一檔名
+            String newFileName = UUID.randomUUID().toString() + extension;
+
+            // 確保上傳目錄存在
+            File uploadDir = new File(IMAGE_UPLOAD_DIR);
+            if (!uploadDir.exists()) {
+                boolean created = uploadDir.mkdirs();
+                if (!created) {
+                    log.error("無法創建上傳目錄: {}", IMAGE_UPLOAD_DIR);
+                    return Result.error("無法創建上傳目錄");
+                }
+            }
+
+            // 保存文件（使用新檔名）
+            File destFile = new File(uploadDir, newFileName);
+            file.transferTo(destFile);
+
+            log.debug("文件上傳成功, 檔名: {}", newFileName);
+            return Result.success(newFileName);
         } catch (IOException e) {
+            log.error("文件上傳失敗", e);
             throw new IOException("文件上傳失敗", e);
         }
     }
