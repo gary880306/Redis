@@ -78,4 +78,10 @@ public class Blog implements Serializable {
      */
     @TableField(exist = false)
     private Map<String, Object> shopInfo;
+
+    /**
+     * 是否點讚過
+     */
+    @TableField(exist = false)
+    private Boolean isLike;
 }

@@ -233,6 +233,9 @@
         </div>
       </section>
 
+      <!-- Blog 區塊 -->
+      <BlogComponent></BlogComponent>
+
       <!-- 信任元素 -->
       <section class="trust-elements">
         <div class="section-container">
@@ -453,12 +456,13 @@ import {
   Share, ChatDotRound, Link, Message, Clock, ArrowRight,
   Goods, PriceTag, Van, Medal, SuccessFilled, CreditCard
 } from '@element-plus/icons-vue';
+import BlogComponent from '@/components/BlogComponent.vue';
 
 export default {
   components: {
     User, Location, Phone, ShoppingCart, BellFilled, Search, Star, StarFilled,
     Share, ChatDotRound, Link, Message, Clock, ArrowRight,
-    Goods, PriceTag, Van, Medal, SuccessFilled, CreditCard
+    Goods, PriceTag, Van, Medal, SuccessFilled, CreditCard, BlogComponent
   },
   setup() {
     const searchQuery = ref('');

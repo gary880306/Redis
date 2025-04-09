@@ -1,11 +1,19 @@
 package com.example.redis.service.impl;
 
+import cn.hutool.core.util.BooleanUtil;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.example.redis.common.Result;
 import com.example.redis.entity.po.Blog;
+import com.example.redis.entity.po.Shop;
+import com.example.redis.entity.po.User;
 import com.example.redis.mapper.BlogMapper;
 import com.example.redis.service.BlogService;
+import com.example.redis.service.ShopService;
+import com.example.redis.service.UserService;
+import com.example.redis.utils.UserHolder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.sql.Timestamp;
@@ -20,6 +28,15 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements Bl
 
     @Autowired
     private BlogMapper blogMapper;
+
+    @Autowired
+    private UserService userService;
+
+    @Autowired
+    private ShopService shopService;
+
+    @Autowired
+    private StringRedisTemplate stringRedisTemplate;
 
     @Override
     public List<Blog> queryLatestBlogs(Integer limit) {
@@ -71,6 +88,78 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements Bl
         }
     }
 
+    @Override
+    public Blog queryBlogDetail(Long id) {
+        log.info("查詢部落格詳情, id = {}", id);
+        try {
+            // 1. 使用 getById 獲取基本資訊
+            Blog blog = getById(id);
+            if (blog == null) {
+                return null;
+            }
+
+            // 2. 查詢並填充用戶資訊
+            User user = userService.getById(blog.getUserId());
+            if (user != null) {
+                Map<String, Object> userInfo = new HashMap<>();
+                userInfo.put("userId", user.getUserId());
+                userInfo.put("username", user.getUsername());
+                // 可以視需要添加其他用戶資訊
+                blog.setUserInfo(userInfo);
+            }
+
+            // 3. 查詢並填充商店資訊
+            if (blog.getShopId() != null) {
+                Shop shop = shopService.getById(blog.getShopId());
+                if (shop != null) {
+                    Map<String, Object> shopInfo = new HashMap<>();
+                    shopInfo.put("shopId", shop.getShopId());
+                    shopInfo.put("name", shop.getName());
+                    shopInfo.put("address", shop.getAddress());
+                    shopInfo.put("imageUrl", shop.getImageUrl());
+                    blog.setShopInfo(shopInfo);
+                }
+            }
+
+            // 4. 檢查 Blog 是否點過讚
+            isLiked(blog);
+
+            return blog;
+        } catch (Exception e) {
+            log.error("查詢部落格詳情失敗", e);
+            throw e;
+        }
+    }
+
+    @Override
+    public Result<String> likeBlog(Long id) {
+        // 1.獲取登入用戶
+        // Long userId = UserHolder.getUser().getUserId();
+        // TODO:TEST USER
+        Long userId = 1L;
+        // 2. 判斷當前用戶是否已經點過讚
+        String key = "blog:liked:" + id;
+        Boolean isMember = stringRedisTemplate.opsForSet().isMember(key, userId.toString());
+        if (BooleanUtil.isFalse(isMember)) {
+            // 3. 未點讚
+            // 3.1. 資料庫 + 1
+            boolean isSuccess = update().setSql("liked = liked + 1").eq("id", id).update();
+            // 3.2. 保存用戶到 redis set 集合
+            if (isSuccess) {
+                stringRedisTemplate.opsForSet().add(key, userId.toString());
+            }
+        } else {
+            // 4. 已經點讚
+            // 4.1. 資料庫 -1
+            boolean isSuccess = update().setSql("liked = liked - 1").eq("id", id).update();
+            // 4.2 把用戶從 redis set 集合中移除
+            if (isSuccess) {
+                stringRedisTemplate.opsForSet().remove(key, userId.toString());
+            }
+        }
+        return Result.success("成功");
+    }
+
     // 輔助方法：安全地獲取Long值
     private Long getLongValue(Map<String, Object> map, String key) {
         Object value = map.get(key);
@@ -107,5 +196,16 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements Bl
         } catch (NumberFormatException e) {
             return null;
         }
+    }
+
+    private void isLiked(Blog blog) {
+        // 1.獲取登入用戶
+        // Long userId = UserHolder.getUser().getUserId();
+        // TODO:TEST USER
+        Long userId = 1L;
+        // 2. 判斷當前用戶是否已經點過讚
+        String key = "blog:liked:" + blog.getId();
+        Boolean isMember = stringRedisTemplate.opsForSet().isMember(key, userId.toString());
+        blog.setIsLike(BooleanUtil.isTrue(isMember));
     }
 }
