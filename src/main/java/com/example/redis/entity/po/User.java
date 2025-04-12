@@ -26,4 +26,6 @@ public class User implements Serializable {
     private String address;
     // 註冊日期
     private Timestamp registrationDate;
+    // 用戶頭像URL
+    private String avatar;
 } 

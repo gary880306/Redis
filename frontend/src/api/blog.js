@@ -51,6 +51,25 @@ export const uploadImage = (formData) => {
         }
     });
 };
+
+/**
+ * 關注/取消關注用戶
+ * @param followUserId
+ * @param {boolean} isFollow - 是否關注，true表示關注，false表示取消關注
+ * @returns {Promise} - API回應
+ */
+export const followUser = (followUserId, isFollow) => {
+    return api.put(`/follow/${followUserId}/${isFollow}`);
+};
+
+/**
+ * 檢查是否已關注用戶
+ * @param {number} followUserId - 用戶ID
+ * @returns {Promise} - API回應
+ */
+export const checkIsFollow = (followUserId) => {
+    return api.get(`/follow/or/not/${followUserId}`);
+};
 // API end
 
 
@@ -192,44 +211,6 @@ export function useBlogPublish() {
         uploadAllImages
     };
 }
-
-/**
- * 工具函數
- */
-export const blogUtils = {
-    // 獲取Blog圖片 URL
-    getBlogImageUrl: (imagePath) => {
-        if (!imagePath) return '';
-        return `http://localhost:8080/images/upload/blog/${imagePath}`;
-    },
-
-    // 獲取用戶頭像 URL
-    getUserAvatarUrl: (avatar) => {
-        if (!avatar) {
-            return '';
-        }
-        return `http://localhost:8080/images/upload/avatar/${avatar}`;
-    },
-
-    // 文字截斷功能
-    truncateText: (text, maxLength) => {
-        if (!text) return '';
-        return text.length > maxLength
-            ? text.substring(0, maxLength) + '...'
-            : text;
-    },
-
-    // 格式化時間
-    formatTime: (dateString) => {
-        if (!dateString) return '';
-        const date = new Date(dateString);
-        return date.toLocaleDateString('zh-TW', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit'
-        });
-    }
-};
 
 /**
  * Blog詳情模態框功能模組
@@ -443,4 +424,100 @@ export function useBlogPublishModal() {
         submitBlog
     };
 }
+
+/**
+ * 關注功能模組
+ */
+export function useFollow() {
+    const isFollowing = ref(false);
+    const followLoading = ref(false);
+
+    // 檢查是否已關注
+    const checkFollowStatus = async (userId) => {
+        if (!userId) return false;
+
+        try {
+            const res = await checkIsFollow(userId);
+            if (res.data && res.data.code === 200) {
+                isFollowing.value = res.data.data;
+                return res.data.data;
+            }
+            return false;
+        } catch (error) {
+            console.error('檢查關注狀態失敗:', error);
+            return false;
+        }
+    };
+
+    // 關注/取消關注
+    const handleFollow = async (userId) => {
+        if (!userId) {
+            ElMessage.warning('無法獲取作者信息');
+            return;
+        }
+
+        followLoading.value = true;
+        const toFollow = !isFollowing.value;
+
+        try {
+            const res = await followUser(userId, toFollow);
+            if (res.data && res.data.code === 200) {
+                isFollowing.value = toFollow;
+                ElMessage.success(toFollow ? '關注成功' : '已取消關注');
+            } else {
+                ElMessage.error(res.data?.message || '操作失敗');
+            }
+        } catch (error) {
+            console.error('關注操作失敗:', error);
+            ElMessage.error('操作失敗，請稍後再試');
+        } finally {
+            followLoading.value = false;
+        }
+    };
+
+    return {
+        isFollowing,
+        followLoading,
+        checkFollowStatus,
+        handleFollow
+    };
+}
+
+/**
+ * 工具函數
+ */
+export const blogUtils = {
+    // 獲取Blog圖片 URL
+    getBlogImageUrl: (imagePath) => {
+        if (!imagePath) return '';
+        return `http://localhost:8080/images/upload/blog/${imagePath}`;
+    },
+
+    // 獲取用戶頭像 URL
+    getUserAvatarUrl: (avatar) => {
+        if (!avatar) {
+            return '';
+        }
+        return `http://localhost:8080/images/upload/avatar/${avatar}`;
+    },
+
+    // 文字截斷功能
+    truncateText: (text, maxLength) => {
+        if (!text) return '';
+        return text.length > maxLength
+            ? text.substring(0, maxLength) + '...'
+            : text;
+    },
+
+    // 格式化時間
+    formatTime: (dateString) => {
+        if (!dateString) return '';
+        const date = new Date(dateString);
+        return date.toLocaleDateString('zh-TW', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+        });
+    }
+};
 // function end

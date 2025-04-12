@@ -114,7 +114,15 @@
       </div>
 
       <div class="blog-detail-content">
-        <p class="blog-detail-text">{{ selectedBlog.content }}</p>
+        <div class="blog-detail-meta">
+          <span>
+            {{ selectedBlog.content }}
+          </span>
+          <span>
+            <el-button type="danger" :plain="!isFollowing" @click="handleFollowClick" :loading="followLoading"
+                       size="small">{{ isFollowing ? '已關注' : '關注' }}</el-button>
+          </span>
+        </div>
 
         <div class="blog-detail-meta">
           <span>
@@ -185,7 +193,7 @@
 </template>
 
 <script>
-import {onMounted} from 'vue'; // mounted
+import {ref, onMounted, watch} from 'vue'; // mounted
 
 import {
   Picture,
@@ -204,8 +212,12 @@ import {
   useBlogPublish,
   useBlogDetailModal,
   useBlogPublishModal,
-  blogUtils
+  blogUtils,
+  followUser,
+  checkIsFollow
 } from '@/api/blog'; // function
+
+import {ElMessage} from 'element-plus';
 
 export default {
   name: 'BlogComponent',
@@ -267,6 +279,69 @@ export default {
       submitBlog: submitBlogFn
     } = useBlogPublishModal();
 
+    // 關注功能相關
+    const isFollowing = ref(false);
+    const followLoading = ref(false);
+
+    // 檢查是否已關注
+    const checkFollowStatus = async (userId) => {
+      if (!userId) return;
+
+      try {
+        const res = await checkIsFollow(userId);
+        if (res.data && res.data.code === 200) {
+          isFollowing.value = res.data.data;
+        }
+      } catch (error) {
+        console.error('檢查關注狀態失敗:', error);
+      }
+    };
+
+    // 處理關注/取消關注
+    const handleFollowClick = async () => {
+      if (!selectedBlog.value || !selectedBlog.value.userId) {
+        ElMessage.warning('無法獲取作者信息');
+        return;
+      }
+
+      const userId = selectedBlog.value.userId;
+      const toFollow = !isFollowing.value;
+      followLoading.value = true;
+
+      try {
+        const res = await followUser(userId, toFollow);
+        if (res.data && res.data.code === 200) {
+          isFollowing.value = toFollow;
+          ElMessage.success(toFollow ? '關注成功' : '已取消關注');
+        } else {
+          ElMessage.error(res.data?.message || '操作失敗');
+        }
+      } catch (error) {
+        console.error('關注操作失敗:', error);
+        ElMessage.error('操作失敗，請稍後再試');
+      } finally {
+        followLoading.value = false;
+      }
+    };
+
+    // 監聽選中的博客變化，檢查關注狀態
+    watch(() => selectedBlog.value, (newBlog) => {
+      if (newBlog && newBlog.userId) {
+        checkFollowStatus(newBlog.userId);
+      }
+    });
+
+    // 自定義打開詳情模態框函數
+    const openBlogDetail = async (blog) => {
+      // 調用原有的打開詳情函數
+      openDetailModal(blog);
+
+      // 檢查關注狀態
+      if (blog.userId) {
+        await checkFollowStatus(blog.userId);
+      }
+    };
+
     // 封裝提交Blog方法
     const submitBlog = () => {
       const success = submitBlogFn(
@@ -311,11 +386,16 @@ export default {
       commentText,
       comments,
       likes,
-      openDetailModal,
+      openDetailModal: openBlogDetail, // 使用新的打開詳情函數
       closeModal,
       handleLike,
       handleShare,
       submitComment,
+
+      // 關注功能
+      isFollowing,
+      followLoading,
+      handleFollowClick,
 
       // Shop列表
       shops,

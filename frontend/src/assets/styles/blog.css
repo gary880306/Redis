@@ -247,7 +247,6 @@
 
 .blog-detail-images {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: 12px;
     margin-bottom: 24px;
 }
@@ -411,6 +410,16 @@
     line-height: 1.5;
 }
 
+.follow-button {
+    margin-left: 8px;
+    min-width: 80px;
+}
+
+.followed-button {
+    background-color: #f56c6c;
+    color: white;
+}
+
 @media (max-width: 768px) {
     .blogs-grid {
         grid-template-columns: 1fr;
@@ -419,10 +428,6 @@
     .section-header .blog-actions {
         flex-direction: column;
         align-items: flex-end;
-    }
-
-    .blog-detail-images {
-        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     }
 
     .detail-image {
