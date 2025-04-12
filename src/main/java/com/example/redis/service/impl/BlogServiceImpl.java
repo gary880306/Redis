@@ -1,8 +1,10 @@
 package com.example.redis.service.impl;
 
-import cn.hutool.core.util.BooleanUtil;
+import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.redis.common.Result;
+import com.example.redis.entity.dto.UserDto;
 import com.example.redis.entity.po.Blog;
 import com.example.redis.entity.po.Shop;
 import com.example.redis.entity.po.User;
@@ -10,7 +12,6 @@ import com.example.redis.mapper.BlogMapper;
 import com.example.redis.service.BlogService;
 import com.example.redis.service.ShopService;
 import com.example.redis.service.UserService;
-import com.example.redis.utils.UserHolder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -18,9 +19,13 @@ import org.springframework.stereotype.Service;
 
 import java.sql.Timestamp;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
+import java.util.Set;
+import java.util.Collections;
+
+import static com.example.redis.utils.RedisConstants.BLOG_LIKED_KEY;
 
 @Slf4j
 @Service
@@ -40,7 +45,7 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements Bl
 
     @Override
     public List<Blog> queryLatestBlogs(Integer limit) {
-        log.info("查詢最新部落格, limit = {}", limit);
+        log.info("查詢最新Blog, limit = {}", limit);
 
         try {
             // 使用SQL JOIN直接獲取關聯數據
@@ -136,17 +141,17 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements Bl
         // 1.獲取登入用戶
         // Long userId = UserHolder.getUser().getUserId();
         // TODO:TEST USER
-        Long userId = 1L;
+        Long userId = 2L;
         // 2. 判斷當前用戶是否已經點過讚
-        String key = "blog:liked:" + id;
-        Boolean isMember = stringRedisTemplate.opsForSet().isMember(key, userId.toString());
-        if (BooleanUtil.isFalse(isMember)) {
+        String key = BLOG_LIKED_KEY + id;
+        Double score = stringRedisTemplate.opsForZSet().score(key, userId.toString());
+        if (score == null) {
             // 3. 未點讚
             // 3.1. 資料庫 + 1
             boolean isSuccess = update().setSql("liked = liked + 1").eq("id", id).update();
-            // 3.2. 保存用戶到 redis set 集合
+            // 3.2. 保存用戶到 redis sortedset 集合
             if (isSuccess) {
-                stringRedisTemplate.opsForSet().add(key, userId.toString());
+                stringRedisTemplate.opsForZSet().add(key, userId.toString(), System.currentTimeMillis());
             }
         } else {
             // 4. 已經點讚
@@ -154,10 +159,34 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements Bl
             boolean isSuccess = update().setSql("liked = liked - 1").eq("id", id).update();
             // 4.2 把用戶從 redis set 集合中移除
             if (isSuccess) {
-                stringRedisTemplate.opsForSet().remove(key, userId.toString());
+                stringRedisTemplate.opsForZSet().remove(key, userId.toString());
             }
         }
         return Result.success("成功");
+    }
+
+    @Override
+    public Result<List<UserDto>> getBlogLikes(Long id) {
+        String key = BLOG_LIKED_KEY + id;
+        // 1. 查詢 top5 點讚用戶
+        Set<String> top5 = stringRedisTemplate.opsForZSet().range(key, 0, 4);
+
+        if (top5 == null || top5.isEmpty()) {
+            return Result.success(Collections.emptyList());
+        }
+
+        // 2. 提取用戶ID
+        List<Long> ids = top5.stream().map(Long::valueOf).toList();
+        String idStr = StrUtil.join(",", ids);
+
+        // 3. 根據用戶ID查找用戶
+        List<UserDto> userDtoList = userService.query().in("user_id", ids).last("ORDER BY FIELD(user_id," + idStr + ")").list()
+                .stream()
+                .map(user -> BeanUtil.copyProperties(user, UserDto.class))
+                .toList();
+
+        // 4. 返回
+        return Result.success(userDtoList);
     }
 
     // 輔助方法：安全地獲取Long值
@@ -202,10 +231,10 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements Bl
         // 1.獲取登入用戶
         // Long userId = UserHolder.getUser().getUserId();
         // TODO:TEST USER
-        Long userId = 1L;
+        Long userId = 2L;
         // 2. 判斷當前用戶是否已經點過讚
-        String key = "blog:liked:" + blog.getId();
-        Boolean isMember = stringRedisTemplate.opsForSet().isMember(key, userId.toString());
-        blog.setIsLike(BooleanUtil.isTrue(isMember));
+        String key = BLOG_LIKED_KEY + blog.getId();
+        Double score = stringRedisTemplate.opsForZSet().score(key, userId.toString());
+        blog.setIsLike(score != null);
     }
 }

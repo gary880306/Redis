@@ -1,6 +1,7 @@
 package com.example.redis.controller;
 
 import com.example.redis.common.Result;
+import com.example.redis.entity.dto.UserDto;
 import com.example.redis.entity.po.Blog;
 import com.example.redis.service.BlogService;
 import lombok.extern.slf4j.Slf4j;
@@ -35,7 +36,7 @@ public class BlogController {
     /**
      * 獲取最新Blog
      * @param limit 限制返回的數量，默認為 4 篇
-     * @return 部落格列表
+     * @return Blog列表
      */
     @GetMapping("/latest")
     public Result<List<Blog>> getLatestBlogs(@RequestParam(defaultValue = "4") Integer limit) {
@@ -78,6 +79,16 @@ public class BlogController {
     @PutMapping("/like/{id}")
     public Result<String> likeBlog(@PathVariable("id") Long id) {
         return blogService.likeBlog(id);
+    }
+
+    /**
+     * Blog點讚排行榜
+     * @param id blogId
+     * @return Blog詳情
+     */
+    @GetMapping("/likes/{id}")
+    public Result<List<UserDto>> getBlogLikes(@PathVariable("id") Long id) {
+        return blogService.getBlogLikes(id);
     }
 
 }

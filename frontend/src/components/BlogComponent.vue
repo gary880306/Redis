@@ -134,6 +134,18 @@
             </el-icon>
             {{ selectedBlog.isLike ? '收回讚' : '讚' }} {{ selectedBlog.liked || 0 }}
           </el-button>
+
+          <!-- 點讚用戶頭像列表 -->
+          <div class="like-users">
+            <el-avatar
+                v-for="user in likes"
+                :key="user.userId"
+                :size="32"
+                :src="getUserAvatarUrl(user.avatar)"
+                class="user-avatar"
+            />
+          </div>
+
           <el-button @click="handleShare">
             <el-icon>
               <Share/>
@@ -173,7 +185,8 @@
 </template>
 
 <script>
-import {onMounted} from 'vue';
+import {onMounted} from 'vue'; // mounted
+
 import {
   Picture,
   EditPen,
@@ -184,7 +197,7 @@ import {
   User,
   Calendar,
   Share
-} from '@element-plus/icons-vue';
+} from '@element-plus/icons-vue'; // icon
 
 import {
   useBlogList,
@@ -192,7 +205,7 @@ import {
   useBlogDetailModal,
   useBlogPublishModal,
   blogUtils
-} from '@/api/blog';
+} from '@/api/blog'; // function
 
 export default {
   name: 'BlogComponent',
@@ -237,6 +250,7 @@ export default {
       selectedBlog,
       commentText,
       comments,
+      likes,
       openBlogModal: openDetailModal,
       closeModal,
       handleLike,
@@ -296,6 +310,7 @@ export default {
       selectedBlog,
       commentText,
       comments,
+      likes,
       openDetailModal,
       closeModal,
       handleLike,
@@ -307,6 +322,7 @@ export default {
 
       // 工具方法
       getBlogImageUrl: blogUtils.getBlogImageUrl,
+      getUserAvatarUrl: blogUtils.getUserAvatarUrl,
       truncateText: blogUtils.truncateText,
       formatTime: blogUtils.formatTime,
       viewBlogDetail,

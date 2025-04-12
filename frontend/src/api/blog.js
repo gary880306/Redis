@@ -2,6 +2,7 @@ import {ref, reactive} from 'vue';
 import api from './axios';
 import {ElMessage} from 'element-plus';
 
+// API start
 /**
  * 獲取最新Blog文章
  * @param {number} limit - 限制返回的數量，默認為4
@@ -21,16 +22,12 @@ export const getBlogDetail = (id) => {
 };
 
 /**
- * 上傳圖片
- * @param {FormData} formData - 包含圖片的FormData
+ * 獲取Blog按讚排行榜
+ * @param {number} id - blogId
  * @returns {Promise} - API回應
  */
-export const uploadImage = (formData) => {
-    return api.post('/upload', formData, {
-        headers: {
-            'Content-Type': 'multipart/form-data'
-        }
-    });
+export const getBlogLikes = (id) => {
+    return api.get(`/blog/likes/${id}`);
 };
 
 /**
@@ -43,13 +40,29 @@ export const likeBlog = (id) => {
 };
 
 /**
- * Blog列表 API函數
+ * 上傳圖片
+ * @param {FormData} formData - 包含圖片的FormData
+ * @returns {Promise} - API回應
+ */
+export const uploadImage = (formData) => {
+    return api.post('/upload', formData, {
+        headers: {
+            'Content-Type': 'multipart/form-data'
+        }
+    });
+};
+// API end
+
+
+// function start
+/**
+ * Blog列表功能模組
  */
 export function useBlogList() {
     const latestBlogs = ref([]);
     const blogsLoading = ref(false);
 
-    // 獲取最新部落格
+    // 獲取最新Blog列表
     const fetchLatestBlogs = async (limit = 4) => {
         blogsLoading.value = true;
         try {
@@ -58,18 +71,18 @@ export function useBlogList() {
                 latestBlogs.value = response.data.data || [];
             }
         } catch (error) {
-            console.error('獲取最新部落格失敗:', error);
+            console.error('獲取最新Blog失敗:', error);
         } finally {
             blogsLoading.value = false;
         }
     };
 
-    // 查看部落格詳情
+    // 查看Blog詳情
     const viewBlogDetail = (id) => {
         window.location.href = `/blog/${id}`;
     };
 
-    // 查看全部部落格
+    // 查看全部Blog
     const viewAllBlogs = () => {
         window.location.href = '/blog';
     };
@@ -84,7 +97,7 @@ export function useBlogList() {
 }
 
 /**
- * Blog發布文章 API函數
+ * Blog發布功能模組
  */
 export function useBlogPublish() {
     const blogFormRef = ref(null);
@@ -158,7 +171,6 @@ export function useBlogPublish() {
 
         try {
             const results = await Promise.all(uploadPromises);
-            // 從每個結果中取出文件名
             const imageNames = results.map(res => res.data.data);
             return imageNames.join(',');
         } catch (error) {
@@ -185,15 +197,18 @@ export function useBlogPublish() {
  * 工具函數
  */
 export const blogUtils = {
-    // 獲取部落格圖片 URL
+    // 獲取Blog圖片 URL
     getBlogImageUrl: (imagePath) => {
         if (!imagePath) return '';
-        if (imagePath.startsWith('http') || imagePath.startsWith('/')) {
-            // 已經是完整路徑
-            return imagePath.startsWith('/') ? `http://localhost:8080${imagePath}` : imagePath;
+        return `http://localhost:8080/images/upload/blog/${imagePath}`;
+    },
+
+    // 獲取用戶頭像 URL
+    getUserAvatarUrl: (avatar) => {
+        if (!avatar) {
+            return '';
         }
-        // 假設只是檔名，加上路徑前綴
-        return `http://localhost:8080/images/upload/${imagePath}`;
+        return `http://localhost:8080/images/upload/avatar/${avatar}`;
     },
 
     // 文字截斷功能
@@ -217,7 +232,7 @@ export const blogUtils = {
 };
 
 /**
- * Blog詳情彈窗相關功能
+ * Blog詳情模態框功能模組
  */
 export function useBlogDetailModal() {
     const showModal = ref(false);
@@ -225,30 +240,33 @@ export function useBlogDetailModal() {
     const commentText = ref('');
     const commentInput = ref(null);
     const comments = ref([]);
+    const likes = ref(null);
 
     // 打開Blog彈窗
     const openBlogModal = async (blog) => {
-        // 首先顯示已有的基本資訊
+        // 先顯示已有的基本資訊
         selectedBlog.value = {...blog, isLike: false};
         showModal.value = true;
 
         try {
-            // 再從 API 獲取完整詳情
+            // 再從API獲取完整資訊
             const response = await getBlogDetail(blog.id);
+            const likeList = await getBlogLikes(blog.id);
+            likes.value = likeList.data.data;
             if (response.data && response.data.code === 200) {
                 // 保留已設定的 isLiked 狀態
                 selectedBlog.value = {
                     ...response.data.data
                 };
 
-                // 同時獲取評論
+                // TODO:同時獲取評論
                 // const commentsResponse = await getComments(blog.id);
                 // if (commentsResponse.data && commentsResponse.data.code === 200) {
                 //     comments.value = commentsResponse.data.data || [];
                 // }
             }
         } catch (error) {
-            console.error('獲取部落格詳情失敗:', error);
+            console.error('獲取Blog詳情失敗:', error);
             ElMessage.error('獲取詳情失敗，顯示簡略資訊');
         }
     };
@@ -274,7 +292,24 @@ export function useBlogDetailModal() {
             ? Math.max(0, (selectedBlog.value.liked || 0) - 1)
             : (selectedBlog.value.liked || 0) + 1;
 
-        await likeBlog(selectedBlog.value.id);
+        try {
+            // 點讚API
+            await likeBlog(selectedBlog.value.id);
+
+            // API呼叫成功後重新獲取點讚列表
+            const likeListResponse = await getBlogLikes(selectedBlog.value.id);
+            if (likeListResponse.data && likeListResponse.data.code === 200) {
+                likes.value = likeListResponse.data.data;
+            }
+        } catch (error) {
+            // 如果API呼叫失敗，回復原狀
+            console.error('點讚操作失敗:', error);
+            selectedBlog.value.isLike = isCurrentlyLiked;
+            selectedBlog.value.liked = isCurrentlyLiked
+                ? (selectedBlog.value.liked || 0) + 1
+                : Math.max(0, (selectedBlog.value.liked || 0) - 1);
+            ElMessage.error('操作失敗，請重試');
+        }
     };
 
     // 焦點到評論框
@@ -289,7 +324,7 @@ export function useBlogDetailModal() {
         ElMessage.info('分享功能尚待實現');
     };
 
-    // 提交評論
+    // TODO:提交評論
     const submitComment = () => {
         if (!commentText.value.trim()) {
             ElMessage.warning('評論內容不能為空');
@@ -323,6 +358,7 @@ export function useBlogDetailModal() {
     return {
         showModal,
         selectedBlog,
+        likes,
         commentText,
         commentInput,
         comments,
@@ -336,7 +372,7 @@ export function useBlogDetailModal() {
 }
 
 /**
- * Blog發布模態框相關功能
+ * Blog發布模態框功能模組
  */
 export function useBlogPublishModal() {
     const blogDialogVisible = ref(false);
@@ -353,12 +389,12 @@ export function useBlogPublishModal() {
         }
     };
 
-    // 打開發布部落格模態框
+    // 打開發布Blog模態框
     const openBlogModal = () => {
         blogDialogVisible.value = true;
     };
 
-    // 提交部落格
+    // 提交Blog
     const submitBlog = async (blogFormRef, blogForm, publishingBlog, uploadAllImages) => {
         if (!blogFormRef.value) return false;
 
@@ -371,13 +407,13 @@ export function useBlogPublishModal() {
                     // 上傳圖片
                     const imageNames = await uploadAllImages();
 
-                    // 構建部落格數據
+                    // 構建Blog數據
                     const blogData = {
                         ...blogForm,
                         images: imageNames
                     };
 
-                    // 發布部落格
+                    // 發布Blog
                     const res = await api.post('/blog', blogData);
 
                     if (res.data.code === 200) {
@@ -391,7 +427,7 @@ export function useBlogPublishModal() {
             });
             return success;
         } catch (error) {
-            console.error('部落格發布錯誤:', error);
+            console.error('Blog發布錯誤:', error);
             ElMessage.error('文章發布失敗');
             return false;
         } finally {
@@ -407,3 +443,4 @@ export function useBlogPublishModal() {
         submitBlog
     };
 }
+// function end

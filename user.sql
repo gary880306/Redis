@@ -20,6 +20,8 @@ CREATE TABLE `user` (
                         UNIQUE KEY `uk_email` (`email`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+ALTER TABLE `user` ADD COLUMN `avatar` VARCHAR(255) COMMENT '用戶頭像URL';
+
 -- fakeData
 INSERT INTO `user` (`username`, `email`, `password`, `phone`, `address`, `registration_date`)
 VALUES ('阿賢', 'test@example.com', '12345678', '0987654321', '台北市中正區忠孝西路', NOW());
