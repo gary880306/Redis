@@ -12,6 +12,7 @@ import com.example.redis.mapper.BlogMapper;
 import com.example.redis.service.BlogService;
 import com.example.redis.service.ShopService;
 import com.example.redis.service.UserService;
+import com.example.redis.utils.UserHolder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -139,9 +140,7 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements Bl
     @Override
     public Result<String> likeBlog(Long id) {
         // 1.獲取登入用戶
-        // Long userId = UserHolder.getUser().getUserId();
-        // TODO:TEST USER
-        Long userId = 2L;
+         Long userId = UserHolder.getUser().getUserId();
         // 2. 判斷當前用戶是否已經點過讚
         String key = BLOG_LIKED_KEY + id;
         Double score = stringRedisTemplate.opsForZSet().score(key, userId.toString());
@@ -228,10 +227,9 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements Bl
     }
 
     private void isLiked(Blog blog) {
+        UserDto user = UserHolder.getUser();
         // 1.獲取登入用戶
-        // Long userId = UserHolder.getUser().getUserId();
-        // TODO:TEST USER
-        Long userId = 2L;
+         Long userId = UserHolder.getUser().getUserId();
         // 2. 判斷當前用戶是否已經點過讚
         String key = BLOG_LIKED_KEY + blog.getId();
         Double score = stringRedisTemplate.opsForZSet().score(key, userId.toString());
