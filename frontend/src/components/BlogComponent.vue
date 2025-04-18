@@ -119,21 +119,40 @@
             {{ selectedBlog.content }}
           </span>
           <span>
-            <el-button type="danger" :plain="!isFollowing" @click="handleFollowClick" :loading="followLoading"
-                       size="small">{{ isFollowing ? '已關注' : '關注' }}</el-button>
+            <el-button
+                v-if="selectedBlog.userId !== loginUserId"
+                type="danger"
+                :plain="!isFollowing"
+                @click="handleFollowClick"
+                :loading="followLoading"
+                size="small"
+            >
+  {{ isFollowing ? '已關注' : '關注' }}
+</el-button>
           </span>
         </div>
 
         <div class="blog-detail-meta">
-          <span>
-            <el-icon><User/></el-icon>
+          <!-- 點擊頭像跳轉 -->
+          <el-avatar
+              class="user-avatar clickable-avatar"
+              :size="32"
+              :src="getUserAvatarUrl(selectedBlog.userInfo.avatar)"
+              @click="goToUserProfile(selectedBlog.userInfo?.userId)"
+          />
+
+          <!-- 使用者名稱（純顯示） -->
+          <span class="user-name">
             {{ selectedBlog.userInfo ? selectedBlog.userInfo.username : '匿名用戶' }}
           </span>
-          <span>
+
+          <!-- 時間區塊（你說要保留） -->
+          <span class="blog-time">
             <el-icon><Calendar/></el-icon>
             {{ formatTime(selectedBlog.createTime) }}
           </span>
         </div>
+
 
         <div class="blog-actions">
           <el-button @click="handleLike" :type="selectedBlog.isLike ? 'primary' : 'default'">
@@ -193,7 +212,7 @@
 </template>
 
 <script>
-import {ref, onMounted, watch} from 'vue'; // mounted
+import {ref, onMounted, watch, computed} from 'vue'; // mounted
 
 import {
   Picture,
@@ -202,7 +221,6 @@ import {
   Star,
   ChatDotRound,
   Plus,
-  User,
   Calendar,
   Share
 } from '@element-plus/icons-vue'; // icon
@@ -219,8 +237,17 @@ import {
 
 import {ElMessage} from 'element-plus';
 
+import {useRouter} from 'vue-router';
+
+import { useUserStore } from '@/stores/userStore';
+
 export default {
   name: 'BlogComponent',
+  computed: {
+    blogUtils() {
+      return blogUtils
+    }
+  },
   components: {
     Picture,
     EditPen,
@@ -228,11 +255,12 @@ export default {
     Star,
     ChatDotRound,
     Plus,
-    User,
     Calendar,
     Share
   },
   setup() {
+    const userStore = useUserStore(); // store userInfo
+    const loginUserId = computed(() => userStore.userInfo?.userId);
     // 獲取Blog列表
     const {
       latestBlogs,
@@ -355,6 +383,14 @@ export default {
       }
     };
 
+    // 跳轉到博客頁面
+    const router = useRouter();
+
+    const goToUserProfile = (userId) => {
+      if (!userId) return;
+      router.push(`/user/${userId}`);
+    };
+
     // 初始化
     onMounted(() => {
       fetchLatestBlogs();
@@ -362,6 +398,7 @@ export default {
     });
 
     return {
+      loginUserId,
       // Blog列表
       blogs: latestBlogs,
       blogsLoading,
@@ -406,7 +443,10 @@ export default {
       truncateText: blogUtils.truncateText,
       formatTime: blogUtils.formatTime,
       viewBlogDetail,
-      viewAllBlogs
+      viewAllBlogs,
+
+      // 跳轉博客頁面
+      goToUserProfile
     };
   }
 };

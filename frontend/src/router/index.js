@@ -5,6 +5,12 @@ import LoginPage from "../views/LoginPage.vue";
 const routes = [
     { path: "/", component: LoginPage },
     { path: "/home", component: HomePage },
+    {
+        path: '/user/:userId',
+        name: 'UserProfile',
+        component: () => import('@/views/UserProfile.vue')
+    }
+
 ];
 
 const router = createRouter({

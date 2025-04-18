@@ -1,6 +1,7 @@
 import { ref } from "vue";
 import api from "@/api/axios";
 import { useRouter } from "vue-router";
+import { useUserStore } from '@/stores/userStore';
 
 export function useLogin() {
     const phone = ref("");
@@ -59,6 +60,8 @@ export function useLogin() {
         }
     };
 
+    const userStore = useUserStore();
+
     const login = async () => {
         // 1. 表單驗證
         if (!phone.value) {
@@ -85,6 +88,9 @@ export function useLogin() {
                 const cleanToken = token.replace("Bearer ", "");
                 localStorage.setItem("token", cleanToken);
                 console.log("Token 存入 localStorage：", cleanToken);
+
+            userStore.setUser(res.data.data);
+            localStorage.setItem("user", JSON.stringify(res.data.data));
 
                 message.value = "登錄成功，跳轉中...";
 
