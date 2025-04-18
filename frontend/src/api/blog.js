@@ -1,6 +1,7 @@
 import {ref, reactive} from 'vue';
 import api from './axios';
 import {ElMessage} from 'element-plus';
+import { API_BASE_URL } from '@/config';
 
 // API start
 /**
@@ -84,6 +85,7 @@ export function useBlogList() {
     // 獲取最新Blog列表
     const fetchLatestBlogs = async (limit = 4) => {
         blogsLoading.value = true;
+        console.log('目前 API base URL:', API_BASE_URL);
         try {
             const response = await getLatestBlogs(limit);
             if (response.data && response.data.code === 200) {
@@ -490,7 +492,7 @@ export const blogUtils = {
     // 獲取Blog圖片 URL
     getBlogImageUrl: (imagePath) => {
         if (!imagePath) return '';
-        return `http://localhost:8080/images/upload/blog/${imagePath}`;
+        return `${API_BASE_URL}/images/upload/blog/${imagePath}`;
     },
 
     // 獲取用戶頭像 URL
@@ -498,7 +500,7 @@ export const blogUtils = {
         if (!avatar) {
             return '';
         }
-        return `http://localhost:8080/images/upload/avatar/${avatar}`;
+        return `${API_BASE_URL}/images/upload/avatar/${avatar}`;
     },
 
     // 文字截斷功能
