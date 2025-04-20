@@ -2,6 +2,7 @@ package com.example.redis.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.example.redis.common.Result;
+import com.example.redis.entity.dto.ScrollResult;
 import com.example.redis.entity.dto.UserDto;
 import com.example.redis.entity.po.Blog;
 
@@ -15,4 +16,8 @@ public interface BlogService extends IService<Blog> {
     Result<String> likeBlog(Long id);
 
     Result<List<UserDto>> getBlogLikes(Long id);
+
+    Result<Long> saveBlog(Blog blog);
+
+    Result<ScrollResult> getBlogOfFollow(Long max, Integer offset);
 }

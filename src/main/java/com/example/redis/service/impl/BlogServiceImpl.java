@@ -4,18 +4,22 @@ import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.redis.common.Result;
+import com.example.redis.entity.dto.ScrollResult;
 import com.example.redis.entity.dto.UserDto;
 import com.example.redis.entity.po.Blog;
+import com.example.redis.entity.po.Follow;
 import com.example.redis.entity.po.Shop;
 import com.example.redis.entity.po.User;
 import com.example.redis.mapper.BlogMapper;
 import com.example.redis.service.BlogService;
+import com.example.redis.service.FollowService;
 import com.example.redis.service.ShopService;
 import com.example.redis.service.UserService;
 import com.example.redis.utils.UserHolder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
 
 import java.sql.Timestamp;
@@ -26,7 +30,7 @@ import java.util.HashMap;
 import java.util.Set;
 import java.util.Collections;
 
-import static com.example.redis.utils.RedisConstants.BLOG_LIKED_KEY;
+import static com.example.redis.utils.RedisConstants.*;
 
 @Slf4j
 @Service
@@ -40,6 +44,9 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements Bl
 
     @Autowired
     private ShopService shopService;
+
+    @Autowired
+    private FollowService followService;
 
     @Autowired
     private StringRedisTemplate stringRedisTemplate;
@@ -110,6 +117,7 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements Bl
                 Map<String, Object> userInfo = new HashMap<>();
                 userInfo.put("userId", user.getUserId());
                 userInfo.put("username", user.getUsername());
+                userInfo.put("avatar", user.getAvatar());
                 // 可以視需要添加其他用戶資訊
                 blog.setUserInfo(userInfo);
             }
@@ -186,6 +194,79 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements Bl
 
         // 4. 返回
         return Result.success(userDtoList);
+    }
+
+    @Override
+    public Result<Long> saveBlog(Blog blog) {
+        // 1. 獲取登入用戶
+        UserDto user = UserHolder.getUser();
+        blog.setUserId(user.getUserId());
+
+        // 2. 保存 Blog
+        boolean isSuccess = save(blog);
+        if (!isSuccess) {
+            return Result.error("新增Blog失敗!");
+        }
+
+        // 3. 取得作者的所有粉絲 select * from follow where follow_user_id = ?
+        List<Follow> follows = followService.query().eq("follow_user_id", user.getUserId()).list();
+
+        // 4. 推送Blog給所有粉絲
+        for (Follow follow : follows) {
+            // 4.1 取得粉絲ID
+            Long userId = follow.getUserId();
+            // 4.2 推送
+            String key = FEED_KEY + userId;
+            stringRedisTemplate.opsForZSet().add(key, blog.getId().toString(), System.currentTimeMillis());
+        }
+
+        // 5. 返回 ID
+        return Result.success(blog.getId());
+    }
+
+    @Override
+    public Result<ScrollResult> getBlogOfFollow(Long max, Integer offset) {
+        // 1. 獲取登入用戶
+        Long userId = UserHolder.getUser().getUserId();
+
+        // 2. 查詢收件箱 ZREVRANGEBYSCORE key Max Min LIMIT offset count
+        String key = FEED_KEY + userId;
+        // TODO: 測試分頁limit先用1，之後可照需求更改
+        int limit = 1;
+        Set<ZSetOperations.TypedTuple<String>> typedTuples = stringRedisTemplate.opsForZSet().reverseRangeByScoreWithScores(key, 0, max, offset, limit);
+        if (typedTuples == null || typedTuples.isEmpty()) {
+            return Result.success();
+        }
+
+        // 3. 分析數據: blogId, minTime(時間戳), offset(偏移量)
+        List<Long> ids = new ArrayList<>(typedTuples.size());
+        long minTime = 0;
+        int os = 1;
+        for (ZSetOperations.TypedTuple<String> typedTuple : typedTuples) { // ex: 5, 4, 4, 2, 2
+            // 3.1 獲取blogId
+            ids.add(Long.valueOf(typedTuple.getValue()));
+            // 3.2 獲取分數(時間戳)
+            long time = typedTuple.getScore().longValue();
+            if (time == minTime) {
+                os ++;
+            } else {
+                minTime = time;
+                os = 1;
+            }
+        }
+
+        // 4. 利用blogId查詢blog
+        String idStr = StrUtil.join(",", ids);
+        List<Blog> blogList = query().in("id", ids).last("ORDER BY FIELD(id," + idStr + ")").list();
+
+        // 4. 封裝並返回
+        ScrollResult result = new ScrollResult();
+        result.setList(blogList);
+        result.setOffset(os);
+        result.setMinTime(minTime);
+        boolean hasNext = typedTuples.size() == limit;
+        result.setHasNext(hasNext);
+        return Result.success(result);
     }
 
     // 輔助方法：安全地獲取Long值

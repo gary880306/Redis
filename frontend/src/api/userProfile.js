@@ -24,3 +24,18 @@ export const toggleFollowUser = (userId, follow) => {
 export const getFollowCommons = (id) => {
     return api.get(`/follow/common/${id}`);
 };
+
+
+/**
+ * 取得目前使用者追蹤對象所發布的文章（支援滾動分頁）
+ * @param {number} maxTime 查詢的最大時間戳（後端會取 score <= maxTime 的資料）
+ * @param {number} offset 若有多筆資料 score 相同，用此偏移量來跳過已顯示過的資料
+ */
+export const getFollowedBlogs = (maxTime = Date.now(), offset = 0) => {
+    return api.get(`/blog/of/follow`, {
+        params: {
+            lastId: maxTime,
+            offset,
+        },
+    });
+};
